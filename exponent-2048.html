@@ -45,11 +45,15 @@
     text-align:center;
   }
   .stat .k{ display:block; font-size:10px; letter-spacing:1.5px; color:var(--muted); }
-  .stat .v{ display:block; margin-top:2px; font-size:17px; font-weight:800; font-variant-numeric: tabular-nums; }
+  .stat .v{ display:block; margin-top:2px; font-size:17px; font-weight:300; font-variant-numeric: tabular-nums; }
+  .stat.clickable{ cursor:pointer; transition: border-color .15s ease, transform .1s ease; }
+  .stat.clickable:hover{ border-color:rgba(142,203,255,.5); }
+  .stat.clickable:active{ transform:scale(.96); }
+  .stat.clickable.feedback .v{ color:#8ecbff; }
 
-  .toolbar{ display:flex; gap:8px; }
+  .toolbar{ display:flex; flex-wrap:wrap; gap:8px; }
   .btn{
-    flex:1;
+    flex:1 1 calc((100% - 16px) / 3);
     border:1px solid rgba(233,240,255,.4);
     border-radius:4px;
     padding:12px 8px;
@@ -74,6 +78,42 @@
   }
   .count{ font-size:13px; font-weight:300; opacity:.6; }
   .btn:disabled .count{ opacity:.5; }
+
+  /* 显示设置：悬浮菜单 */
+  .display-wrap{ position:relative; flex:1 1 calc((100% - 16px) / 3); }
+  .display-wrap #displayBtn{ width:100%; }
+  .display-menu{
+    display:none;
+    position:absolute;
+    left:0; right:0; top:calc(100% + 6px);
+    z-index:20;
+    flex-direction:column;
+    gap:6px;
+    padding:8px;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:8px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  /* 桥接按钮与菜单之间的空隙，避免鼠标移过去时菜单消失 */
+  .display-menu::before{
+    content:'';
+    position:absolute;
+    left:0; right:0; top:-6px;
+    height:6px;
+  }
+  .display-wrap:hover .display-menu,
+  .display-wrap:focus-within .display-menu{ display:flex; }
+  .display-menu .menu-item{
+    flex:0 0 auto;
+    padding:9px 10px;
+    font-size:14px;
+    justify-content:flex-start;
+  }
+  .display-menu .menu-item.active{ border-color:rgba(142,203,255,.7); color:#8ecbff; }
+
+  /* 加分动画隐藏 */
+  .gains-hidden .gain{ display:none !important; }
 
   .board{
     position:relative;
@@ -113,7 +153,7 @@
     transition: translate .1s ease-in-out;
     border-radius:0;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-weight:800;
+    font-weight:300; /* 主字符粗细：改这里，数值越小线条越细（200 更细，400 更粗） */
     letter-spacing:.5px;
     font-variant-numeric: tabular-nums;
     will-change: translate;
@@ -148,6 +188,7 @@
     text-orientation: upright;
   }
   .values-hidden .real{ display:none; }
+  .letters-hidden .exp{ display:none; }
 
   .tile.spawn{ animation: appear .16s ease-out .07s both; }
   .tile.merged{ animation: pop .18s ease-out .06s both; z-index:3; }
@@ -242,25 +283,42 @@
   body[data-theme="light"] .ov-badge{ color:#2f6fd0; border-color:rgba(47,111,208,.5); }
   body[data-theme="light"] .hint{ color:#78849b; }
   body[data-theme="light"] .hint b{ color:#3f4b63; }
+  body[data-theme="light"] .display-menu{
+    background:transparent;
+    border-color:rgba(16,26,42,.15);
+    box-shadow:0 10px 30px rgba(16,26,42,.12);
+  }
+  body[data-theme="light"] .display-menu .menu-item.active{
+    border-color:rgba(47,111,208,.6);
+    color:#2f6fd0;
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><span class="pow">2<sup>[?]</sup></span> 幂次2048</h1>
+    <h1><span class="pow">2<sup>[?]</sup></span></h1>
     <div class="stats">
       <div class="stat"><span class="k">分数</span><span class="v" id="score">0</span></div>
       <div class="stat"><span class="k">最高</span><span class="v" id="best">0</span></div>
-      <div class="stat"><span class="k">用时</span><span class="v" id="time">00:00</span></div>
+      <div class="stat clickable" id="timeStat" title="点击暂停/继续">
+        <span class="k">用时</span><span class="v" id="time">00:00</span>
+      </div>
     </div>
   </header>
 
   <div class="toolbar">
-    <button class="btn primary" id="newBtn">新游戏</button>
+    <button class="btn primary" id="newBtn">新一局</button>
     <button class="btn" id="undoBtn" disabled>撤销 <span class="count" id="undoCount">0</span></button>
-    <button class="btn" id="valuesBtn">隐藏数值</button>
-    <button class="btn" id="themeBtn">浅色</button>
-    <button class="btn" id="pauseBtn">暂停</button>
+    <div class="display-wrap">
+      <button class="btn" id="displayBtn">显示</button>
+      <div class="display-menu" id="displayMenu">
+        <button class="btn menu-item" data-opt="letters">隐藏字母</button>
+        <button class="btn menu-item" data-opt="values">隐藏数值</button>
+        <button class="btn menu-item" data-opt="gains">隐藏加分</button>
+        <button class="btn menu-item" data-opt="theme">浅色</button>
+      </div>
+    </div>
   </div>
 
   <div class="board" id="board">
@@ -270,8 +328,8 @@
   </div>
 
   <p class="hint">
-    方向键 / WASD 移动 · 空格暂停 · <b>Ctrl+Z 撤销</b>（可一直退回开局）<br />
-    1 = 2⁰ · A = 2¹(2) · B = 2²(4) · C = 2³(8) · D = 2⁴(16) · E = 2⁵(32) … 每次合并按合成后的幂次加分
+    ↑←↓→或WASD移动   空格暂停   <b>ctrl_Z 撤销</b><br />
+    <b>exponent-2048</b> 按合成后幂次加分
   </p>
 </div>
 
@@ -280,7 +338,6 @@
   'use strict';
 
   var SIZE = 4;
-  var SPAWN_BASE_RATIO = 0.9;
   var BEST_KEY = 'power2048.best';
   var THEME_KEY = 'power2048.theme';
 
@@ -291,12 +348,16 @@
   var scoreEl = document.getElementById('score');
   var bestEl = document.getElementById('best');
   var timeEl = document.getElementById('time');
+  var timeStat = document.getElementById('timeStat');
   var undoBtn = document.getElementById('undoBtn');
   var undoCountEl = document.getElementById('undoCount');
-  var pauseBtn = document.getElementById('pauseBtn');
   var newBtn = document.getElementById('newBtn');
-  var valuesBtn = document.getElementById('valuesBtn');
-  var themeBtn = document.getElementById('themeBtn');
+  var displayBtn = document.getElementById('displayBtn');
+  var displayMenu = document.getElementById('displayMenu');
+  var lettersItem = displayMenu.querySelector('[data-opt="letters"]');
+  var valuesItem = displayMenu.querySelector('[data-opt="values"]');
+  var gainsItem = displayMenu.querySelector('[data-opt="gains"]');
+  var themeItem = displayMenu.querySelector('[data-opt="theme"]');
 
   // 深色：黑底；浅色：无色底。方块保持有色，按幂次提高不透明度
   var THEMES = {
@@ -322,9 +383,9 @@
     } catch (e) { return 'dark'; }
   }
 
-  // 主字符：2^0 显示 1，2^1..2^26 显示 A..Z
+  // 主字符：2^0 留空（十进制 1 显示在方向一侧），2^1..2^26 显示 A..Z
   function exponentLabel(n) {
-    if (n <= 0) return '1';
+    if (n <= 0) return '';
     if (n <= 26) return String.fromCharCode(64 + n);
     return String(n);
   }
@@ -356,6 +417,8 @@
   var history = []; // 全局撤销栈
   var gameOver = false;
   var paused = false;
+  var gainsHidden = false;  // 隐藏加分动画
+  var feedbackTimer = null; // 用时点击反馈定时器
   var started = false;
   var elapsed = 0;
   var lastTick = 0;
@@ -385,7 +448,7 @@
 
   function applyTheme() {
     document.body.setAttribute('data-theme', theme);
-    themeBtn.textContent = theme === 'dark' ? '浅色' : '深色';
+    if (typeof refreshMenu === 'function') refreshMenu();
     if (!tiles) return;
     tiles.forEach(function (t) {
       var s = tileStyle(t.n);
@@ -416,15 +479,12 @@
     exp.className = 'exp';
     exp.textContent = exponentLabel(n);
 
-    if (n > 0) {
-      var real = document.createElement('span');
-      real.className = 'real';
-      real.textContent = n >= 20 ? Math.pow(2, n).toExponential(1) : String(Math.pow(2, n));
-      el.appendChild(exp);
-      el.appendChild(real);
-    } else {
-      el.appendChild(exp);
-    }
+    var real = document.createElement('span');
+    real.className = 'real';
+    real.textContent = n >= 20 ? Math.pow(2, n).toExponential(1) : String(Math.pow(2, n));
+
+    el.appendChild(exp);
+    el.appendChild(real);
 
     var t = { id: nextId++, n: n, r: r, c: c, el: el };
     tiles.set(t.id, t);
@@ -443,12 +503,18 @@
     return list;
   }
 
+  // 生成方块概率：2^0 = 4/5、2^1 = 4/25、2^2 = 1/25
+  function spawnValue(roll) {
+    if (roll < 0.8) return 0;
+    if (roll < 0.96) return 1;
+    return 2;
+  }
+
   function spawn() {
     var empty = emptyCells();
     if (!empty.length) return null;
     var p = empty[Math.floor(Math.random() * empty.length)];
-    var n = Math.random() < SPAWN_BASE_RATIO ? 0 : 1;
-    return createTile(n, p[0], p[1], 'spawn');
+    return createTile(spawnValue(Math.random()), p[0], p[1], 'spawn');
   }
 
   function lineCells(dir, i) {
@@ -510,6 +576,7 @@
   }
 
   function floatGain(n, r, c) {
+    if (gainsHidden) return;
     var el = document.createElement('div');
     el.className = 'gain';
     el.textContent = '+' + n;
@@ -632,6 +699,24 @@
     timeEl.textContent = (m < 10 ? '0' + m : String(m)) + ':' + (s < 10 ? '0' + s : String(s));
   }
 
+  // 结束标语权重 (8+4+4+15+1)/32
+  var END_MESSAGES = [
+    { text: '没有可移动方块了', w:8},
+    { text: '完全卡住', w:4},
+    { text: '过于拥挤', w:4},
+    { text: 'GameOver', w:15},
+    { text: 'gAmeOver', w:1}
+  ];
+
+  function pickEndMessage() {
+    var r = Math.random() * 32;
+    for (var i = 0; i < END_MESSAGES.length; i++) {
+      r -= END_MESSAGES[i].w;
+      if (r < 0) return END_MESSAGES[i].text;
+    }
+    return END_MESSAGES[0].text;
+  }
+
   function showOverlay(kind) {
     if (!kind) {
       overlayEl.classList.remove('show');
@@ -649,8 +734,7 @@
     } else {
       overlayEl.innerHTML =
         '<div class="ov">' +
-          '<div class="ov-badge">GAME OVER</div>' +
-          '<h2>没有可移动的方块了</h2>' +
+          '<h2>' + pickEndMessage() + '</h2>' +
           '<p>本局得分 <b>' + score + '</b> · 用时 ' + timeEl.textContent + '</p>' +
           '<div class="ov-actions">' +
             '<button class="btn" data-action="undo"' + (history.length ? '' : ' disabled') + '>撤销一步</button>' +
@@ -665,8 +749,19 @@
     if (!started || gameOver) return;
     paused = !paused;
     if (!paused) lastTick = performance.now();
-    pauseBtn.textContent = paused ? '继续' : '暂停';
     showOverlay(paused ? 'pause' : null);
+    flashTimeFeedback(paused ? '已暂停' : '继续');
+  }
+
+  // 点击用时后短暂显示暂停/继续反馈（0.25 秒）
+  function flashTimeFeedback(text) {
+    clearTimeout(feedbackTimer);
+    timeStat.classList.add('feedback');
+    timeEl.textContent = text;
+    feedbackTimer = setTimeout(function () {
+      timeStat.classList.remove('feedback');
+      renderTime();
+    }, 250);
   }
 
   function initState() {
@@ -683,7 +778,8 @@
     layerEl.innerHTML = '';
     overlayEl.classList.remove('show');
     overlayEl.innerHTML = '';
-    pauseBtn.textContent = '暂停';
+    clearTimeout(feedbackTimer);
+    timeStat.classList.remove('feedback');
     setDirection('down');
     renderTime();
     updateUI();
@@ -765,21 +861,49 @@
   });
 
   undoBtn.addEventListener('click', undo);
-  pauseBtn.addEventListener('click', togglePause);
   newBtn.addEventListener('click', newGame);
 
+  // 用时块点击 = 暂停/继续
+  timeStat.addEventListener('click', togglePause);
+
+  // 显示/隐藏状态：字母、数值、加分动画互不影响
   var valuesHidden = false;
-  valuesBtn.addEventListener('click', function () {
-    valuesHidden = !valuesHidden;
-    document.body.classList.toggle('values-hidden', valuesHidden);
-    valuesBtn.textContent = valuesHidden ? '显示数值' : '隐藏数值';
+  var lettersHidden = false;
+
+  function refreshMenu() {
+    lettersItem.textContent = lettersHidden ? '隐藏字母' : '显示字母';
+    lettersItem.classList.toggle('active', lettersHidden);
+    valuesItem.textContent = valuesHidden ? '隐藏数值' : '显示数值';
+    valuesItem.classList.toggle('active', valuesHidden);
+    gainsItem.textContent = gainsHidden ? '隐藏加分' : '显示加分';
+    gainsItem.classList.toggle('active', gainsHidden);
+    themeItem.textContent = theme === 'dark' ? '深色' : '浅色';
+    /*themeItem.classList.toggle('active', theme === 'light');*/
+  }
+
+  // 显示设置菜单：委托点击
+  displayMenu.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-opt]');
+    if (!btn) return;
+    var opt = btn.getAttribute('data-opt');
+    if (opt === 'letters') {
+      lettersHidden = !lettersHidden;
+      document.body.classList.toggle('letters-hidden', lettersHidden);
+    } else if (opt === 'values') {
+      valuesHidden = !valuesHidden;
+      document.body.classList.toggle('values-hidden', valuesHidden);
+    } else if (opt === 'gains') {
+      gainsHidden = !gainsHidden;
+      document.body.classList.toggle('gains-hidden', gainsHidden);
+    } else if (opt === 'theme') {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem(THEME_KEY, theme); } catch (err) {}
+      applyTheme();
+    }
+    refreshMenu();
   });
 
-  themeBtn.addEventListener('click', function () {
-    theme = theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
-    applyTheme();
-  });
+  refreshMenu();
 
   // 点击按钮时颜色反转 0.1 秒
   document.addEventListener('click', function (e) {
