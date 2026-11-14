@@ -6,22 +6,21 @@
 <title>幂次 2048</title>
 <style>
   :root{
-    --gap: 12px;
+    --gap: 0px;
     --text: #e9f0ff;
     --muted: #8595b4;
     --panel: #182233;
-    --cell: #263349;
   }
-  @media (max-width: 430px){ :root{ --gap: 9px; } }
 
   *{ box-sizing: border-box; }
-  html,body{ height:100%; }
+  html{ height:100%; }
   body{
     margin:0;
     min-height:100%;
     padding:22px 16px 36px;
     display:flex;
     justify-content:center;
+    align-items:flex-start;
     background: radial-gradient(900px 520px at 50% -10%, #1d2a44 0%, #0a0e16 62%) #0a0e16;
     color:var(--text);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -95,9 +94,10 @@
   .board{
     position:relative;
     width:100%;
+    flex:0 0 auto;
     aspect-ratio:1 / 1;
     padding:var(--gap);
-    border-radius:22px;
+    border-radius:14px;
     background: linear-gradient(160deg,#1f2b40 0%, #151d2b 100%);
     box-shadow: 0 22px 55px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07);
     container-type: inline-size;
@@ -114,9 +114,9 @@
     gap:var(--gap);
   }
   .cell{
-    background:var(--cell);
-    border-radius:12px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
+    background:rgba(255,255,255,.035);
+    border-radius:0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
   }
   .tile-layer{ position:absolute; inset:var(--gap); }
 
@@ -127,12 +127,13 @@
     height:calc((100% - 3 * var(--gap)) / 4);
     translate: calc(var(--c, 0) * (100% + var(--gap))) calc(var(--r, 0) * (100% + var(--gap)));
     transition: translate .1s ease-in-out;
-    border-radius:12px;
+    border-radius:0;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     font-weight:800;
     letter-spacing:.5px;
     font-variant-numeric: tabular-nums;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -3px 8px rgba(0,0,0,.16), 0 4px 10px rgba(0,0,0,.3);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.1), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -2px 8px rgba(0,0,0,.22);
+    text-shadow: 0 1px 3px rgba(0,0,0,.55);
     will-change: translate;
   }
   .tile .exp{ font-size: clamp(20px, 9cqw, 44px); line-height:1; }
@@ -173,7 +174,7 @@
 
   .overlay{
     position:absolute; inset:0;
-    border-radius:22px;
+    border-radius:14px;
     background: rgba(8,12,20,.74);
     -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
@@ -258,25 +259,24 @@
   var pauseBtn = document.getElementById('pauseBtn');
   var newBtn = document.getElementById('newBtn');
 
-  var PALETTE = {
-    1:  ['#dfe6ef', '#22304a'],
-    2:  ['#f4a261', '#3a2208'],
-    3:  ['#2a6fdb', '#ffffff'],
-    4:  ['#e63946', '#ffffff'],
-    5:  ['#2a9d8f', '#ffffff'],
-    6:  ['#9b5de5', '#ffffff'],
-    7:  ['#f9c74f', '#3a2c00'],
-    8:  ['#577590', '#ffffff'],
-    9:  ['#f9844a', '#3a1a00'],
-    10: ['#43aa8b', '#08281a'],
-    11: ['#277da1', '#ffffff'],
-    12: ['#b5179e', '#ffffff'],
-    13: ['#90be6d', '#182a08'],
-    14: ['#7b2cbf', '#ffffff'],
-    15: ['#f9a03f', '#3a2000'],
-    16: ['#1b263b', '#ffffff']
-  };
-  var FALLBACK = ['#0d1b2a', '#4cc9f0'];
+  // 三个基础色（#RRGGBBAA 中的 alpha 为十六进制），按幂次循环使用
+  var BASE_COLORS = [
+    { r: 0x00, g: 0x40, b: 0x80, a: 0x80 / 255 },
+    { r: 0x80, g: 0x00, b: 0x00, a: 0xA0 / 255 },
+    { r: 0x40, g: 0x80, b: 0x80, a: 0xC0 / 255 }
+  ];
+  var BOARD_RGB = [0x1a, 0x24, 0x38];
+
+  // 合成到棋盘底色上，并随轮次提升不透明度，避免高幂次与低幂次完全同色
+  function tileColor(n) {
+    var base = BASE_COLORS[(n - 1) % 3];
+    var cycle = Math.floor((n - 1) / 3);
+    var a = Math.min(0.95, base.a + cycle * 0.1);
+    var r = Math.round(base.r * a + BOARD_RGB[0] * (1 - a));
+    var g = Math.round(base.g * a + BOARD_RGB[1] * (1 - a));
+    var b = Math.round(base.b * a + BOARD_RGB[2] * (1 - a));
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
 
   var grid;         // 4x4，存放方块对象或 null
   var tiles;        // id -> 方块对象
@@ -318,9 +318,9 @@
     el.style.setProperty('--r', String(r));
     el.style.setProperty('--c', String(c));
 
-    var colors = PALETTE[n] || FALLBACK;
-    el.style.background = colors[0];
-    el.style.color = colors[1];
+    var colors = tileColor(n);
+    el.style.background = colors;
+    el.style.color = '#ffffff';
 
     var exp = document.createElement('span');
     exp.className = 'exp';
