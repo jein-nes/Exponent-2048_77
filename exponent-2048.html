@@ -241,14 +241,7 @@
   var newBtn = document.getElementById('newBtn');
   var valuesBtn = document.getElementById('valuesBtn');
 
-  var BASE_GRAY = [0xdb, 0xe0, 0xe8];
-  // A/B/C/D 四色循环，之后每轮加深
-  var LIGHT_COLORS = [
-    [0x9d, 0xc7, 0xff],
-    [0xff, 0xad, 0xad],
-    [0xa8, 0xe6, 0xa2],
-    [0xff, 0xcf, 0x9e]
-  ];
+  var BOARD_BG = [0x1a, 0x24, 0x38];
 
   // 主字符：2^0 显示 1，2^1..2^26 显示 A..Z
   function exponentLabel(n) {
@@ -257,24 +250,16 @@
     return String(n);
   }
 
+  // 无色方块：每 4 个幂次一档，不透明度 1/2 → 3/4 → 7/8 → 15/16 …（剩余量逐档减半）
   function tileStyle(n) {
-    var rgb;
-    if (n <= 0) {
-      rgb = BASE_GRAY;
-    } else {
-      var base = LIGHT_COLORS[(n - 1) % 4];
-      var cycle = Math.floor((n - 1) / 4);
-      var k = Math.max(0.45, 1 - cycle * 0.16);
-      rgb = [
-        Math.round(base[0] * k),
-        Math.round(base[1] * k),
-        Math.round(base[2] * k)
-      ];
-    }
-    var lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+    var block = Math.floor(n / 4);
+    var a = 1 - Math.pow(0.5, block + 1);
     return {
-      bg: 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')',
-      fg: lum > 0.58 ? '#101a2a' : '#ffffff'
+      bg: 'rgb(' +
+        Math.round(255 * a + BOARD_BG[0] * (1 - a)) + ',' +
+        Math.round(255 * a + BOARD_BG[1] * (1 - a)) + ',' +
+        Math.round(255 * a + BOARD_BG[2] * (1 - a)) + ')',
+      fg: '#101a2a'
     };
   }
 
