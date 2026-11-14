@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>幂次 2048</title>
+<title>2^[?] 幂次2048</title>
 <style>
   :root{
     --gap: 0px;
@@ -30,10 +30,10 @@
 
   .app{ width:min(100%, 460px); display:flex; flex-direction:column; gap:12px; }
 
-  header{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-  h1{ margin:0; font-size:25px; letter-spacing:.5px; font-weight:800; }
-  h1 span{ color:#4cc9f0; }
-  .sub{ margin:5px 0 0; font-size:12px; color:var(--muted); }
+  header{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  h1{ margin:0; font-size:26px; letter-spacing:.5px; font-weight:700; }
+  h1 .pow{ color:#8ecbff; }
+  h1 sup{ font-size:.52em; font-weight:600; margin-left:1px; }
 
   .stats{ display:flex; gap:7px; }
   .stat{
@@ -50,46 +50,30 @@
   .toolbar{ display:flex; gap:8px; }
   .btn{
     flex:1;
-    border:0;
-    border-radius:12px;
-    padding:11px 10px;
+    border:1px solid rgba(233,240,255,.4);
+    border-radius:4px;
+    padding:12px 8px;
     cursor:pointer;
-    background:#22304a;
-    color:#dbe6fa;
+    background:transparent;
+    color:#e9f0ff;
     font-family:inherit;
-    font-size:13px;
-    font-weight:700;
+    font-size:15px;
+    font-weight:400;
+    letter-spacing:.5px;
     display:flex; align-items:center; justify-content:center; gap:6px;
-    transition: background .15s ease, transform .08s ease, opacity .15s ease;
+    transition: opacity .15s ease, background-color .1s ease, color .1s ease, border-color .1s ease;
   }
-  .btn:hover{ background:#2c3c5b; }
-  .btn:active{ transform: translateY(1px); }
-  .btn:disabled{ opacity:.38; cursor:not-allowed; }
-  .btn.primary{
-    background:linear-gradient(135deg,#3a86ff,#4cc9f0);
-    color:#04121f;
+  .btn:hover{ opacity:.5; }
+  .btn:disabled{ opacity:.28; cursor:not-allowed; }
+  .btn.primary{ border-color:rgba(142,203,255,.7); color:#eaf6ff; }
+  .btn.invert{
+    background:#e9f0ff;
+    border-color:#e9f0ff;
+    color:#0a121f;
+    opacity:1;
   }
-  .btn.primary:hover{ filter:brightness(1.06); }
-  .btn kbd{
-    font-family:inherit;
-    font-size:10px;
-    font-weight:600;
-    opacity:.6;
-    border:1px solid rgba(255,255,255,.22);
-    border-radius:5px;
-    padding:0 4px;
-    line-height:1.5;
-  }
-  .btn.primary kbd{ border-color: rgba(4,18,31,.3); }
-  .count{
-    font-size:11px;
-    font-weight:700;
-    background:rgba(255,255,255,.1);
-    border-radius:999px;
-    padding:1px 7px;
-    min-width:20px;
-  }
-  .btn:disabled .count{ background:rgba(255,255,255,.08); }
+  .count{ font-size:13px; font-weight:300; opacity:.6; }
+  .btn:disabled .count{ opacity:.5; }
 
   .board{
     position:relative;
@@ -97,7 +81,7 @@
     flex:0 0 auto;
     aspect-ratio:1 / 1;
     padding:var(--gap);
-    border-radius:14px;
+    border-radius:0;
     background: linear-gradient(160deg,#1f2b40 0%, #151d2b 100%);
     box-shadow: 0 22px 55px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07);
     container-type: inline-size;
@@ -114,9 +98,9 @@
     gap:var(--gap);
   }
   .cell{
-    background:rgba(255,255,255,.035);
+    background:rgba(255,255,255,.03);
     border-radius:0;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
   }
   .tile-layer{ position:absolute; inset:var(--gap); }
 
@@ -132,12 +116,11 @@
     font-weight:800;
     letter-spacing:.5px;
     font-variant-numeric: tabular-nums;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.1), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -2px 8px rgba(0,0,0,.22);
-    text-shadow: 0 1px 3px rgba(0,0,0,.55);
     will-change: translate;
   }
   .tile .exp{ font-size: clamp(20px, 9cqw, 44px); line-height:1; }
   .tile .real{ font-size: clamp(8px, 2.4cqw, 12px); font-weight:700; opacity:.7; margin-top:4px; letter-spacing:.5px; }
+  .values-hidden .real{ display:none; }
 
   .tile.spawn{ animation: appear .16s ease-out .07s both; }
   .tile.merged{ animation: pop .18s ease-out .06s both; z-index:3; }
@@ -174,7 +157,7 @@
 
   .overlay{
     position:absolute; inset:0;
-    border-radius:14px;
+    border-radius:0;
     background: rgba(8,12,20,.74);
     -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
@@ -210,10 +193,7 @@
 <body>
 <div class="app">
   <header>
-    <div>
-      <h1>幂次 <span>2048</span></h1>
-      <p class="sub">方块上是 2 的幂次，合并即进位</p>
-    </div>
+    <h1><span class="pow">2<sup>[?]</sup></span> 幂次2048</h1>
     <div class="stats">
       <div class="stat"><span class="k">分数</span><span class="v" id="score">0</span></div>
       <div class="stat"><span class="k">最高</span><span class="v" id="best">0</span></div>
@@ -224,6 +204,7 @@
   <div class="toolbar">
     <button class="btn primary" id="newBtn">新游戏</button>
     <button class="btn" id="undoBtn" disabled>撤销 <span class="count" id="undoCount">0</span></button>
+    <button class="btn" id="valuesBtn">隐藏数值</button>
     <button class="btn" id="pauseBtn">暂停</button>
   </div>
 
@@ -235,7 +216,7 @@
 
   <p class="hint">
     方向键 / WASD 移动 · 空格暂停 · <b>Ctrl+Z 撤销</b>（可一直退回开局）<br />
-    1=2 · 2=4 · 3=8 · 4=16 · 5=32 · 6=64 … 每次合并按合成后的幂次加分
+    1 = 2⁰ · A = 2¹(2) · B = 2²(4) · C = 2³(8) · D = 2⁴(16) · E = 2⁵(32) … 每次合并按合成后的幂次加分
   </p>
 </div>
 
@@ -244,7 +225,7 @@
   'use strict';
 
   var SIZE = 4;
-  var SPAWN_ONE_RATIO = 0.9;
+  var SPAWN_BASE_RATIO = 0.9;
   var BEST_KEY = 'power2048.best';
 
   var boardEl = document.getElementById('board');
@@ -258,24 +239,43 @@
   var undoCountEl = document.getElementById('undoCount');
   var pauseBtn = document.getElementById('pauseBtn');
   var newBtn = document.getElementById('newBtn');
+  var valuesBtn = document.getElementById('valuesBtn');
 
-  // 三个基础色（#RRGGBBAA 中的 alpha 为十六进制），按幂次循环使用
-  var BASE_COLORS = [
-    { r: 0x00, g: 0x40, b: 0x80, a: 0x80 / 255 },
-    { r: 0x80, g: 0x00, b: 0x00, a: 0xA0 / 255 },
-    { r: 0x40, g: 0x80, b: 0x80, a: 0xC0 / 255 }
+  var BASE_GRAY = [0xdb, 0xe0, 0xe8];
+  // A/B/C/D 四色循环，之后每轮加深
+  var LIGHT_COLORS = [
+    [0x9d, 0xc7, 0xff],
+    [0xff, 0xad, 0xad],
+    [0xa8, 0xe6, 0xa2],
+    [0xff, 0xcf, 0x9e]
   ];
-  var BOARD_RGB = [0x1a, 0x24, 0x38];
 
-  // 合成到棋盘底色上，并随轮次提升不透明度，避免高幂次与低幂次完全同色
-  function tileColor(n) {
-    var base = BASE_COLORS[(n - 1) % 3];
-    var cycle = Math.floor((n - 1) / 3);
-    var a = Math.min(0.95, base.a + cycle * 0.1);
-    var r = Math.round(base.r * a + BOARD_RGB[0] * (1 - a));
-    var g = Math.round(base.g * a + BOARD_RGB[1] * (1 - a));
-    var b = Math.round(base.b * a + BOARD_RGB[2] * (1 - a));
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  // 主字符：2^0 显示 1，2^1..2^26 显示 A..Z
+  function exponentLabel(n) {
+    if (n <= 0) return '1';
+    if (n <= 26) return String.fromCharCode(64 + n);
+    return String(n);
+  }
+
+  function tileStyle(n) {
+    var rgb;
+    if (n <= 0) {
+      rgb = BASE_GRAY;
+    } else {
+      var base = LIGHT_COLORS[(n - 1) % 4];
+      var cycle = Math.floor((n - 1) / 4);
+      var k = Math.max(0.45, 1 - cycle * 0.16);
+      rgb = [
+        Math.round(base[0] * k),
+        Math.round(base[1] * k),
+        Math.round(base[2] * k)
+      ];
+    }
+    var lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+    return {
+      bg: 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')',
+      fg: lum > 0.58 ? '#101a2a' : '#ffffff'
+    };
   }
 
   var grid;         // 4x4，存放方块对象或 null
@@ -318,20 +318,23 @@
     el.style.setProperty('--r', String(r));
     el.style.setProperty('--c', String(c));
 
-    var colors = tileColor(n);
-    el.style.background = colors;
-    el.style.color = '#ffffff';
+    var style = tileStyle(n);
+    el.style.background = style.bg;
+    el.style.color = style.fg;
 
     var exp = document.createElement('span');
     exp.className = 'exp';
-    exp.textContent = String(n);
+    exp.textContent = exponentLabel(n);
 
-    var real = document.createElement('span');
-    real.className = 'real';
-    real.textContent = n >= 20 ? Math.pow(2, n).toExponential(1) : String(Math.pow(2, n));
-
-    el.appendChild(exp);
-    el.appendChild(real);
+    if (n > 0) {
+      var real = document.createElement('span');
+      real.className = 'real';
+      real.textContent = n >= 20 ? Math.pow(2, n).toExponential(1) : String(Math.pow(2, n));
+      el.appendChild(exp);
+      el.appendChild(real);
+    } else {
+      el.appendChild(exp);
+    }
 
     var t = { id: nextId++, n: n, r: r, c: c, el: el };
     tiles.set(t.id, t);
@@ -354,7 +357,7 @@
     var empty = emptyCells();
     if (!empty.length) return null;
     var p = empty[Math.floor(Math.random() * empty.length)];
-    var n = Math.random() < SPAWN_ONE_RATIO ? 1 : 2;
+    var n = Math.random() < SPAWN_BASE_RATIO ? 0 : 1;
     return createTile(n, p[0], p[1], 'spawn');
   }
 
@@ -669,6 +672,21 @@
   undoBtn.addEventListener('click', undo);
   pauseBtn.addEventListener('click', togglePause);
   newBtn.addEventListener('click', newGame);
+
+  var valuesHidden = false;
+  valuesBtn.addEventListener('click', function () {
+    valuesHidden = !valuesHidden;
+    document.body.classList.toggle('values-hidden', valuesHidden);
+    valuesBtn.textContent = valuesHidden ? '显示数值' : '隐藏数值';
+  });
+
+  // 点击按钮时颜色反转 0.1 秒
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn');
+    if (!btn || btn.disabled) return;
+    btn.classList.add('invert');
+    setTimeout(function () { btn.classList.remove('invert'); }, 100);
+  }, true);
 
   newGame();
   bestEl.textContent = String(best);
