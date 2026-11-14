@@ -298,12 +298,21 @@
   var valuesBtn = document.getElementById('valuesBtn');
   var themeBtn = document.getElementById('themeBtn');
 
-  // 深色：黑底 + 白色方块；浅色：无色底 + 黑色方块
+  // 深色：黑底；浅色：无色底。方块保持有色，按幂次提高不透明度
   var THEMES = {
-    dark:  { board: [0x1a, 0x24, 0x38], fill: 255, ink: '#101a2a' },
-    light: { board: [0xea, 0xec, 0xef], fill: 0,   ink: '#ffffff' }
+    dark:  { board: [0x1a, 0x24, 0x38] },
+    light: { board: [0xea, 0xec, 0xef] }
   };
   var theme = readTheme();
+
+  var BASE_GRAY = [0xdb, 0xe0, 0xe8];
+  // A/B/C/D 四色循环
+  var LIGHT_COLORS = [
+    [0x9d, 0xc7, 0xff],
+    [0xff, 0xad, 0xad],
+    [0xa8, 0xe6, 0xa2],
+    [0xff, 0xcf, 0x9e]
+  ];
 
   function readTheme() {
     try {
@@ -318,18 +327,24 @@
     return String(n);
   }
 
-  // 无色方块：每 4 个幂次一档，不透明度 1/2 → 3/4 → 7/8 → 15/16 …（剩余量逐档减半）
+  // 方块不透明度：50% 起，每个幂次 +4%，到 100% 封顶
   function tileStyle(n) {
     var t = THEMES[theme];
-    var block = Math.floor(n / 4);
-    var a = 1 - Math.pow(0.5, block + 1);
+    var base = n <= 0 ? BASE_GRAY : LIGHT_COLORS[(n - 1) % 4];
+    var a = Math.min(1, 0.5 + 0.04 * n);
+    var r = Math.round(base[0] * a + t.board[0] * (1 - a));
+    var g = Math.round(base[1] * a + t.board[1] * (1 - a));
+    var b = Math.round(base[2] * a + t.board[2] * (1 - a));
+    var lum = 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
     return {
-      bg: 'rgb(' +
-        Math.round(t.fill * a + t.board[0] * (1 - a)) + ',' +
-        Math.round(t.fill * a + t.board[1] * (1 - a)) + ',' +
-        Math.round(t.fill * a + t.board[2] * (1 - a)) + ')',
-      fg: t.ink
+      bg: 'rgb(' + r + ',' + g + ',' + b + ')',
+      fg: lum > 0.2 ? '#101a2a' : '#ffffff'
     };
+  }
+
+  function srgb(v) {
+    var s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
   }
 
   var grid;         // 4x4，存放方块对象或 null
