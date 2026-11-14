@@ -306,12 +306,14 @@
   var theme = readTheme();
 
   var BASE_GRAY = [0xdb, 0xe0, 0xe8];
-  // A/B/C/D 四色循环
-  var LIGHT_COLORS = [
+  // 六色循环：蓝、红、绿、橙、紫、黄，冷暖交替且相邻色相差异大
+  var TILE_COLORS = [
     [0x9d, 0xc7, 0xff],
-    [0xff, 0xad, 0xad],
+    [0xff, 0x9d, 0x9d],
     [0xa8, 0xe6, 0xa2],
-    [0xff, 0xcf, 0x9e]
+    [0xff, 0xcf, 0x9e],
+    [0xc9, 0xb0, 0xff],
+    [0xff, 0xe6, 0x80]
   ];
 
   function readTheme() {
@@ -327,11 +329,11 @@
     return String(n);
   }
 
-  // 方块不透明度：50% 起，每个幂次 +4%，到 100% 封顶
+  // 方块不透明度：2^0 起 25%，每个幂次 +5%，到 100% 封顶；颜色按六色循环
   function tileStyle(n) {
     var t = THEMES[theme];
-    var base = n <= 0 ? BASE_GRAY : LIGHT_COLORS[(n - 1) % 4];
-    var a = Math.min(1, 0.5 + 0.04 * n);
+    var base = n <= 0 ? BASE_GRAY : TILE_COLORS[(n - 1) % TILE_COLORS.length];
+    var a = Math.min(1, 0.25 + 0.05 * n);
     var r = Math.round(base[0] * a + t.board[0] * (1 - a));
     var g = Math.round(base[1] * a + t.board[1] * (1 - a));
     var b = Math.round(base[2] * a + t.board[2] * (1 - a));
